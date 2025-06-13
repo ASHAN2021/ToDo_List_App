@@ -1,8 +1,9 @@
 "use client";
 
 import Todo from "@/Components/Todo";
+import axios from "axios";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -27,15 +28,64 @@ export default function Home() {
   const onSubmitHandle = async (e)=>{
     e.preventDefault();
     try {
+      const response = await axios.post('/api',formData);
       toast.success("Todo Added Successfully!");
+      setFormData({
+        title: "",
+        description: ""
+      });
+      await fetchTodos(); // Refresh the todo list after adding a new todo
     } catch (error) {
-      
+      toast.error("Something went wrong!");
     }
   }
 
+  const [todos, setTodos] = useState([]);
+  const fetchTodos = async () => {
+    try {
+      const response = await axios.get('/api');
+      setTodos(response.data.todos);
+    } catch (error) {
+      toast.error("Failed to fetch todos");
+    }
+  };
+
+  const deleteTodo = async (id) => {
+    try {
+     await axios.delete('/api',{
+      params: {
+        id: id
+      }
+     })
+      toast.success("Todo deleted successfully!");
+      await fetchTodos(); // Refresh the todo list after deletion
+    } catch (error) {
+      toast.error("Failed to delete todo");
+    }
+  }
+
+  const completeTodo = async (id) => {
+    try {
+      await axios.put('/api',{}, {
+        params: {
+          id: id
+        }
+      });
+      toast.success("Todo marked as completed!");
+      await fetchTodos(); // Refresh the todo list after marking as completed
+    } catch (error) {
+      toast.error("Failed to mark todo as completed");
+    }
+  }
+
+  useEffect(()=>{
+    fetchTodos();
+  }
+  ,[]);
+
   return (
     <>
-    <ToastContainer/>
+    <ToastContainer theme="dark"/>
       <form onSubmit={onSubmitHandle} className="flex items-start flex-col gap-2 w-[80%] max-w-[600px] mt-24 px-2 mx-auto">
         <input
           type="text"
@@ -80,9 +130,17 @@ export default function Home() {
             </tr>
           </thead>
           <tbody>
-            <Todo/>
-            <Todo/>
-            <Todo/>
+            {todos.map((todo, index) => (
+              <Todo
+                key={index}
+                id={todo._id}
+                title={todo.title}
+                description={todo.description}
+                status={todo.isComleted}
+                deleteTodo={deleteTodo}
+                completeTodo={completeTodo}
+              />
+            ))}
             
           </tbody>
         </table>
